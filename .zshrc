@@ -59,16 +59,6 @@ fpath=(
   ${fpath}
 )
 
-tpop() {
-  local session_name=claude
-  tmux has-session -t "$session_name" 2>/dev/null
-  if [ $? -eq 0 ]; then
-    tmux popup tmux attach -t "$session_name"
-  else
-    tmux popup tmux new -s "$session_name"
-  fi
-}
-
 _kubectl_lazy_completion() {
   unfunction kubectl 2>/dev/null
   [[ $commands[kubectl] ]] && source <(command kubectl completion zsh)
