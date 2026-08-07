@@ -13,30 +13,29 @@ for dotfile in "${DOTFILES_DIR}"/.??*; do
   ln -fnsv "$dotfile" "$HOME"
 done
 
-NVIM_CONFIG_DIR="$HOME/.config/nvim"
-mkdir -p "$NVIM_CONFIG_DIR"
-
-legacy_nvim_init="$NVIM_CONFIG_DIR/init.vim"
-if [ -L "$legacy_nvim_init" ] && [ "$(readlink "$legacy_nvim_init")" = "$DOTFILES_DIR/nvim/init.vim" ]; then
-  rm "$legacy_nvim_init"
-fi
-
-link_nvim_path() {
+link_config_path() {
   local source_path=$1
   local destination_path=$2
 
   if [ -e "$destination_path" ] && [ ! -L "$destination_path" ]; then
-    echo "Error: refusing to replace existing Neovim path: $destination_path" >&2
+    echo "Error: refusing to replace existing config path: $destination_path" >&2
     exit 1
   fi
 
   ln -fnsv "$source_path" "$destination_path"
 }
 
-link_nvim_path "$DOTFILES_DIR/nvim/init.lua" "$NVIM_CONFIG_DIR/init.lua"
-link_nvim_path "$DOTFILES_DIR/nvim/lua" "$NVIM_CONFIG_DIR/lua"
-link_nvim_path "$DOTFILES_DIR/nvim/lazy-lock.json" "$NVIM_CONFIG_DIR/lazy-lock.json"
-link_nvim_path "$DOTFILES_DIR/nvim/.stylua.toml" "$NVIM_CONFIG_DIR/.stylua.toml"
+NVIM_CONFIG_DIR="$HOME/.config/nvim"
+mkdir -p "$NVIM_CONFIG_DIR"
+
+link_config_path "$DOTFILES_DIR/nvim/init.lua" "$NVIM_CONFIG_DIR/init.lua"
+link_config_path "$DOTFILES_DIR/nvim/lua" "$NVIM_CONFIG_DIR/lua"
+link_config_path "$DOTFILES_DIR/nvim/lazy-lock.json" "$NVIM_CONFIG_DIR/lazy-lock.json"
+link_config_path "$DOTFILES_DIR/nvim/.stylua.toml" "$NVIM_CONFIG_DIR/.stylua.toml"
+
+HERDR_CONFIG_DIR="$HOME/.config/herdr"
+mkdir -p "$HERDR_CONFIG_DIR"
+link_config_path "$DOTFILES_DIR/herdr/config.toml" "$HERDR_CONFIG_DIR/config.toml"
 
 if [ ! -e "$HOME/.config/karabiner/karabiner.json" ]; then
   mkdir -p "$HOME/.config/karabiner/" && touch "$HOME/.config/karabiner/karabiner.json"
