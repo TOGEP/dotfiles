@@ -1,5 +1,6 @@
-# Fig pre block. Keep at the top of this file.
-[[ -f "$HOME/.fig/shell/zshrc.pre.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.pre.zsh"
+# Kiro CLI pre block. Keep at the top of this file.
+[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh"
+
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -8,7 +9,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # 日本語を使う
-export LANG=ja_jp.UTF-8
+export LANG=ja_JP.UTF-8
 
 # golang
 export PATH=$PATH:/opt/go/bin
@@ -58,6 +59,26 @@ fpath=(
   ${fpath}
 )
 
+tpop() {
+  local session_name=claude
+  tmux has-session -t "$session_name" 2>/dev/null
+  if [ $? -eq 0 ]; then
+    tmux popup tmux attach -t "$session_name"
+  else
+    tmux popup tmux new -s "$session_name"
+  fi
+}
+
+_kubectl_lazy_completion() {
+  unfunction kubectl 2>/dev/null
+  [[ $commands[kubectl] ]] && source <(command kubectl completion zsh)
+}
+
+kubectl() {
+  _kubectl_lazy_completion
+  command kubectl "$@"
+}
+
 # fool proof
 # terraform destroy -help も使えなくなるのが玉に瑕
 function terraform() {
@@ -70,8 +91,18 @@ function terraform() {
   command terraform "$@"
 }
 
-autoload -Uz compinit
-compinit
+# itermのブラウザーをsplitで開く
+browser() {
+  osascript <<'APPLESCRIPT'
+tell application "iTerm2"
+  tell current window
+    tell current session
+      split vertically with profile "browser"
+    end tell
+  end tell
+end tell
+APPLESCRIPT
+}
 
 ### Added by Zinit's installer
 if [[ ! -f $HOME/.zinit/bin/zinit.zsh ]]; then
@@ -96,19 +127,15 @@ zinit light-mode for \
 
 ### End of Zinit's installer chunk
 # theme
-zinit ice depth=1; zinit light romkatv/powerlevel10k
+zinit ice depth=1
+zinit light romkatv/powerlevel10k
 
 # Completion
-zinit light zsh-users/zsh-completions
-zinit light zsh-users/zsh-autosuggestions
-zinit light marlonrichert/zsh-autocomplete
-
-# Syntax Highlight
-zinit light zdharma-continuum/fast-syntax-highlighting
-
-zinit light zsh-users/zsh-history-substring-search
-
-zinit light chrissicool/zsh-256color
+zinit wait lucid for \
+  zsh-users/zsh-completions \
+  zdharma-continuum/fast-syntax-highlighting \
+  zsh-users/zsh-history-substring-search \
+  chrissicool/zsh-256color
 
 # bind fg to ctrl+z
 fg-ctrl-z(){
@@ -125,18 +152,10 @@ bindkey '^Z' fg-ctrl-z
 
 # zsh completion
 # bindkey '\t' menu-complete "$terminfo[kcbt]" reverse-menu-complete
-bindkey '\t' menu-select "$terminfo[kcbt]" menu-select
-bindkey -M menuselect '\t' menu-complete "$terminfo[kcbt]" reverse-menu-complete
-zstyle ':autocomplete:history-search-backward:*' list-lines 16
-zstyle ':autocomplete:history-incremental-search-backward:*' list-lines 16
-
-# k8s completion
-[[ $commands[kubectl] ]] && source <(kubectl completion zsh)
-
-# aws completion
-autoload bashcompinit && bashcompinit
-autoload -Uz compinit && compinit
-complete -C '/usr/local/bin/aws_completer' aws
+# bindkey '\t' menu-select "$terminfo[kcbt]" menu-select
+# bindkey -M menuselect '\t' menu-complete "$terminfo[kcbt]" reverse-menu-complete
+# zstyle ':autocomplete:history-search-backward:*' list-lines 16
+# zstyle ':autocomplete:history-incremental-search-backward:*' list-lines 16
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
@@ -144,5 +163,11 @@ complete -C '/usr/local/bin/aws_completer' aws
 # Iterm2 Shell integration
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
-# Fig post block. Keep at the bottom of this file.
-[[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f "${HOME}/google-cloud-sdk/path.zsh.inc" ]; then . "${HOME}/google-cloud-sdk/path.zsh.inc"; fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f "${HOME}/google-cloud-sdk/completion.zsh.inc" ]; then . "${HOME}/google-cloud-sdk/completion.zsh.inc"; fi
+
+# Kiro CLI post block. Keep at the bottom of this file.
+[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"

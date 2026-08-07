@@ -11,6 +11,13 @@ set termguicolors
 set background=dark
 syntax on
 
+" Auto-reload files changed outside current Neovim instance
+set autoread
+augroup TodoAutoReload
+  autocmd!
+  autocmd FocusGained,BufEnter,CursorHold,CursorHoldI * if mode() !=# "c" | checktime | endif
+augroup END
+
 " Tab/Indent
 set expandtab
 set tabstop=2
@@ -44,6 +51,16 @@ set noswapfile
 set nobackup
 set noundofile
 
+" fold
+set foldcolumn=1
+set foldlevel=99
+set foldlevelstart=99
+set foldenable
+augroup markdown_folding
+  autocmd!
+  autocmd FileType markdown setlocal foldmethod=indent
+augroup END
+
 " keymap
 let mapleader = "\<Space>"
 nnoremap <silent> <Esc><Esc> :nohlsearch<CR>
@@ -69,8 +86,8 @@ if has('persistent_undo')
 endif
 
 " open&source vimrc
-nnoremap <Leader>. :new ~/Dotfiles/nvim/init.vim<CR>
-nnoremap <Leader>, :source ~/Dotfiles/nvim/init.vim<CR>
+nnoremap <Leader>. :new $MYVIMRC<CR>
+nnoremap <Leader>, :source $MYVIMRC<CR>
 
 " vim-plug
 call plug#begin(stdpath('data') . '/plugged')
@@ -78,14 +95,17 @@ call plug#begin(stdpath('data') . '/plugged')
 " lsp
 " masonは遅延読み込みが非推奨となっているのでプラグイン読み込みはinitファイル上で書くように
 " > mason.nvim is optimized to load as little as possible during setup. Lazy-loading the plugin, or somehow deferring the setup, is not recommended.
-Plug 'williamboman/mason.nvim'
-Plug 'williamboman/mason-lspconfig.nvim'
+Plug 'mason-org/mason.nvim'
+Plug 'mason-org/mason-lspconfig.nvim'
 Plug 'neovim/nvim-lspconfig'
 Plug 'hrsh7th/cmp-nvim-lsp'
 Plug 'hrsh7th/cmp-buffer'
 Plug 'hrsh7th/cmp-path'
 Plug 'hrsh7th/cmp-cmdline'
 Plug 'nvim-lua/plenary.nvim'
+Plug 'nvim-tree/nvim-web-devicons'
+Plug 'ibhagwan/fzf-lua'
+Plug 'pwntester/octo.nvim'
 Plug 'petertriho/cmp-git'
 Plug 'hrsh7th/nvim-cmp'
 " For vsnip users.
@@ -97,21 +117,26 @@ Plug 'hrsh7th/vim-vsnip'
 " For 'copilot.vim' users.
 Plug 'hrsh7th/cmp-copilot'
 
+Plug 'obsidian-nvim/obsidian.nvim'
+
+Plug 'kevinhwang91/promise-async'
+Plug 'kevinhwang91/nvim-ufo'
+
 lua << EOF
 -- lsp settings
 -- lspの設定に関しては遅延読み込みしても良い
 -- Global mappings.
 -- See `:help vim.diagnostic.*` for documentation on any of the below functions
 vim.keymap.set('n', '<space>e', vim.diagnostic.open_float)
-vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
-vim.keymap.set('n', ']d', vim.diagnostic.goto_next)
+vim.keymap.set('n', '[d', function() vim.diagnostic.jump({ count = -1 }) end)
+vim.keymap.set('n', ']d', function() vim.diagnostic.jump({ count = 1 }) end)
 vim.keymap.set('n', '<space>q', vim.diagnostic.setloclist)
 
 -- Use an on_attach function to only map the following keys
 -- after the language server attaches to the current buffer
 local on_attach = function(client, bufnr)
 -- Enable completion triggered by <c-x><c-o>
-vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
+vim.bo[bufnr].omnifunc = 'v:lua.vim.lsp.omnifunc'
 
 -- Mappings.
 -- See `:help vim.lsp.*` for documentation on any of the below functions
@@ -258,6 +283,9 @@ autocmd fileType go command! BP :DlvToggleBreakpoint
 autocmd fileType go command! BPC :DlvClearAll
 
 Plug 'github/copilot.vim'
+let g:copilot_no_tab_map = v:true
+let g:copilot_assume_mapped = v:true
+imap <silent><script><expr> <C-J> copilot#Accept("\<CR>")
 
 Plug 'google/vim-jsonnet'
 
@@ -269,33 +297,235 @@ call plug#end()
 " lsp setup
 lua << EOF
 require("mason").setup()
-require("mason-lspconfig").setup()
-require("mason-lspconfig").setup_handlers {
-    function (server_name) -- default handler (optional)
-        require("lspconfig")[server_name].setup {}
-    end,
-    -- Next, you can provide a dedicated handler for specific servers.
-    -- For example, a handler override for the `rust_analyzer`:
-    -- ["rust_analyzer"] = function ()
-    --    require("rust-tools").setup {}
-    -- end
-}
+require("mason-lspconfig").setup({
+  ensure_installed = {
+    "gopls",
+    "terraformls",
+    "rust_analyzer",
+    "marksman",
+    "ltex",
+  },
+  automatic_enable = true,
+})
+EOF
+
+" ufo setup
+lua << EOF
+require('ufo').setup({
+  provider_selector = function(bufnr, filetype, buftype)
+    if filetype == "markdown" then
+      return { "indent" }
+    end
+    return { "lsp", "indent" }
+  end,
+})
+
+vim.keymap.set('n', 'zR', function()
+  require('ufo').openAllFolds()
+end)
+
+vim.keymap.set('n', 'zM', function()
+  require('ufo').closeAllFolds()
+end)
 EOF
 
 " Setup language servers.
 lua << EOF
-local lspconfig = require('lspconfig')
-lspconfig.gopls.setup {}
-lspconfig.terraformls.setup {}
-lspconfig.rust_analyzer.setup {
-  -- Server-specific settings. See `:help lspconfig-setup`
+vim.lsp.config('gopls', {})
+vim.lsp.enable('gopls')
+vim.lsp.config('terraformls', {})
+vim.lsp.enable('terraformls')
+vim.lsp.config('rust_analyzer', {
   settings = {
     ['rust-analyzer'] = {},
   },
-}
+})
+vim.lsp.enable('rust_analyzer')
+
+vim.lsp.config('marksman', {})
+vim.lsp.enable('marksman')
+
+vim.lsp.config('ltex', {
+  filetypes = { 'markdown', 'text', 'gitcommit' },
+  settings = {
+    ltex = {
+      language = 'ja-JP',
+    },
+  },
+})
+vim.lsp.enable('ltex')
 EOF
 
+" setup obsidian nvim.
+lua << EOF
+require("obsidian").setup({
+  legacy_commands = false,
+  workspaces = {
+    {
+      name = "Note",
+      path = "~/Documents/Note",
+    },
+  },
 
+  completion = {
+    min_chars = 2,
+  },
+
+  daily_notes = {
+    folder = "dailies",
+    date_format = "%Y-%m-%d",
+  },
+
+  ui = {
+    enable = false,
+  },
+})
+EOF
+
+" setup octo.nvim
+lua << EOF
+local ok, octo = pcall(require, "octo")
+if ok then
+  local picker = "default"
+  if pcall(require, "fzf-lua") then
+    picker = "fzf-lua"
+  end
+
+  octo.setup({
+    picker = picker,
+    enable_builtin = true,
+    default_to_projects_v2 = false,
+    suppress_missing_scope = {
+      projects_v2 = true,
+    },
+  })
+
+  local function github_url_under_cursor()
+    local line = vim.api.nvim_get_current_line()
+    local col = vim.api.nvim_win_get_cursor(0)[2] + 1
+
+    local function pick_url(pattern, start_at)
+      local from = start_at or 1
+      while true do
+        local s, e, url = line:find(pattern, from)
+        if not s then
+          return nil
+        end
+        local match = line:sub(s, e)
+        local rs, re = match:find("(https?://[^%s]+)")
+        if rs and re then
+          local us = s + rs - 1
+          local ue = s + re - 1
+          if col >= us and col <= ue then
+            return url:gsub("[),%.:;!?]+$", "")
+          end
+        end
+        from = e + 1
+      end
+    end
+
+    local url = pick_url("%b[]%((https?://[^)%s]+)%)")
+      or pick_url("<(https?://[^>%s]+)>")
+      or pick_url("(https?://[%w%-%._~:/%?#%[%]@!$&'*+,;=%%]+)")
+
+    if url and url:match("^https?://github%.com/") then
+      return url
+    end
+
+    local cfile = vim.fn.expand("<cfile>")
+    if cfile and cfile:match("^https?://github%.com/") then
+      return cfile
+    end
+    return nil
+  end
+
+  local function octo_open_url_under_cursor()
+    local url = github_url_under_cursor()
+    if not url then
+      vim.notify("カーソル位置のGitHub URLを解決できませんでした", vim.log.levels.WARN)
+      return
+    end
+
+    local before = {}
+    for _, b in ipairs(vim.api.nvim_list_bufs()) do
+      before[b] = true
+    end
+
+    local columns = vim.o.columns
+    local lines = vim.o.lines - vim.o.cmdheight
+    local width = math.floor(columns * 0.86)
+    local height = math.floor(lines * 0.82)
+    local col = math.floor((columns - width) / 2)
+    local row = math.floor((lines - height) / 2)
+    if row < 0 then
+      row = 0
+    end
+
+    local float_buf = vim.api.nvim_create_buf(false, true)
+    local float_win = vim.api.nvim_open_win(float_buf, true, {
+      relative = "editor",
+      width = width,
+      height = height,
+      col = col,
+      row = row,
+      border = "rounded",
+    })
+    vim.wo[float_win].winhighlight = "NormalFloat:Normal,FloatBorder:FloatBorder"
+
+    local ok_cmd, err = pcall(vim.api.nvim_cmd, { cmd = "Octo", args = { url } }, {})
+    if not ok_cmd then
+      vim.notify("Octo 実行エラー: " .. tostring(err), vim.log.levels.ERROR)
+      if vim.api.nvim_win_is_valid(float_win) then
+        pcall(vim.api.nvim_win_close, float_win, true)
+      end
+      return
+    end
+
+    vim.schedule(function()
+      if not vim.api.nvim_win_is_valid(float_win) then
+        return
+      end
+
+      local current_buf = vim.api.nvim_win_get_buf(float_win)
+      local current_ft = vim.bo[current_buf].filetype or ""
+      if current_ft == "octo" then
+        return
+      end
+
+      local candidate_buf = nil
+      for _, b in ipairs(vim.api.nvim_list_bufs()) do
+        if (not before[b]) and vim.api.nvim_buf_is_valid(b) then
+          local ft = vim.bo[b].filetype or ""
+          local name = vim.api.nvim_buf_get_name(b)
+          if ft == "octo" or name:match("octo") then
+            candidate_buf = b
+            break
+          end
+        end
+      end
+
+      if candidate_buf then
+        vim.api.nvim_win_set_buf(float_win, candidate_buf)
+        for _, w in ipairs(vim.api.nvim_list_wins()) do
+          if w ~= float_win and vim.api.nvim_win_is_valid(w) and vim.api.nvim_win_get_buf(w) == candidate_buf then
+            local cfg = vim.api.nvim_win_get_config(w)
+            if cfg.relative == "" then
+              pcall(vim.api.nvim_win_close, w, true)
+            end
+          end
+        end
+      else
+        vim.notify("Octoバッファをfloating windowに関連付けできませんでした", vim.log.levels.WARN)
+      end
+    end)
+  end
+
+  vim.keymap.set('n', '<Leader>go', '<Cmd>Octo<CR>', { noremap = true, silent = true })
+  vim.keymap.set('n', '<Leader>gi', '<Cmd>Octo issue list<CR>', { noremap = true, silent = true })
+  vim.keymap.set('n', '<Leader>gp', '<Cmd>Octo pr list<CR>', { noremap = true, silent = true })
+  vim.keymap.set('n', '<Leader>ou', octo_open_url_under_cursor, { noremap = true, silent = true })
+end
+EOF
 
 " Set up nvim-cmp.
 lua << EOF
@@ -321,6 +551,7 @@ lua << EOF
       ['<CR>'] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
     }),
     sources = cmp.config.sources({
+      { name = 'copilot' },
       { name = 'nvim_lsp' },
       { name = 'vsnip' }, -- For vsnip users.
       -- { name = 'luasnip' }, -- For luasnip users.
@@ -355,12 +586,6 @@ lua << EOF
       { name = 'cmdline' }
     })
   })
-
-  cmp.setup {
-    sources = {
-      { name = 'copilot' }
-    }
-  }
 
   -- Set up lspconfig.
   local capabilities = require('cmp_nvim_lsp').default_capabilities()

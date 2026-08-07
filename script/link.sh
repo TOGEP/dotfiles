@@ -2,7 +2,7 @@
 set -euxo pipefail
 
 CURRENT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-DOTFILES_DIR=$(dirname ${CURRENT_DIR})
+DOTFILES_DIR=$(dirname "${CURRENT_DIR}")
 
 for dotfile in "${DOTFILES_DIR}"/.??*; do
   [[ $dotfile = "${DOTFILES_DIR}/.git" ]] && continue
@@ -10,7 +10,7 @@ for dotfile in "${DOTFILES_DIR}"/.??*; do
   [[ $dotfile = "${DOTFILES_DIR}/.DS_Store" ]] && continue
   echo "$dotfile"
 
-  ln -fnsv $dotfile $HOME
+  ln -fnsv "$dotfile" "$HOME"
 done
 
 if [ ! -e "$HOME/.config/nvim/init.vim" ]; then
