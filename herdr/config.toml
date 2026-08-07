@@ -9,6 +9,7 @@ new_cwd = "follow"
 
 [keys]
 prefix = "ctrl+b"
+detach = ""
 reload_config = "prefix+shift+r"
 workspace_picker = "prefix+w"
 goto = "prefix+g"
@@ -27,7 +28,7 @@ zoom = "prefix+z"
 resize_mode = "prefix+r"
 
 [[keys.command]]
-key = "ctrl+q"
+key = "prefix+q"
 type = "popup"
 command = "exec codex"
 description = "open Codex"
