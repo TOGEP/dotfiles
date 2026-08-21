@@ -12,9 +12,9 @@ fi
 export LANG=ja_JP.UTF-8
 
 # golang
-export PATH=$PATH:/opt/go/bin
-export GOPATH=$HOME/Development/go
-export PATH=$PATH:$GOPATH/bin
+export GOROOT="$(ghq root)/go.googlesource.com/go"
+export GOPATH="$(ghq root)/go"
+export PATH="$PATH:$GOROOT/bin:$GOPATH/bin"
 
 # clangd
 export PATH=$PATH:/Library/Developer/CommandLineTools/usr/bin
@@ -67,6 +67,15 @@ _kubectl_lazy_completion() {
 kubectl() {
   _kubectl_lazy_completion
   command kubectl "$@"
+}
+
+openv() {
+  local name="$1"
+  shift
+
+  op run \
+    --env-file="$HOME/.config/openv/${name}.env" \
+    -- "$@"
 }
 
 # fool proof
@@ -123,9 +132,13 @@ zinit light romkatv/powerlevel10k
 # Completion
 zinit wait lucid for \
   zsh-users/zsh-completions \
+  zsh-users/zsh-autosuggestions \
   zdharma-continuum/fast-syntax-highlighting \
   zsh-users/zsh-history-substring-search \
   chrissicool/zsh-256color
+
+autoload -Uz compinit
+compinit
 
 # bind fg to ctrl+z
 fg-ctrl-z(){
