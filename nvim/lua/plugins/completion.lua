@@ -24,7 +24,6 @@ return {
       "hrsh7th/cmp-path",
       "hrsh7th/cmp-cmdline",
       "petertriho/cmp-git",
-      "hrsh7th/cmp-copilot",
       { "L3MON4D3/LuaSnip", submodules = false },
       "saadparwaiz1/cmp_luasnip",
       "github/copilot.vim",
@@ -49,7 +48,6 @@ return {
           ["<CR>"] = cmp.mapping.confirm({ select = true }),
         }),
         sources = cmp.config.sources({
-          { name = "copilot" },
           { name = "nvim_lsp" },
           { name = "luasnip" },
         }, {
