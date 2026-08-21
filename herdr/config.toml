@@ -1,8 +1,9 @@
 onboarding = false
 
 [theme]
-name = "catppuccin"
+name = "terminal"
 
+auto_switch = false
 [terminal]
 shell_mode = "auto"
 new_cwd = "follow"
@@ -37,8 +38,13 @@ height = "80%"
 
 [[keys.command]]
 key = "prefix+t"
-type = "popup"
-command = "exec nvim ~/Documents/Note/Kanban/work.md"
-description = "open todo list"
-width = "90%"
-height = "90%"
+type = "shell"
+command = "exec ~/dotfiles/script/herdr-toggle-todo.sh"
+description = "toggle todo side pane"
+
+[ui]
+sidebar_width = 22
+sidebar_collapsed_mode = "hidden"
+
+[ui.toast]
+delivery = "off"
